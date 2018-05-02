@@ -1,0 +1,14 @@
+enclave {
+    from "Sealing/Sealing.edl" import *;
+
+    trusted {
+        /* define ECALLs here. */
+        public int generate_random_number(void);
+        public void ecall_start_raft([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
+    };
+
+    untrusted {
+        /* define OCALLs here. */
+        void ocall_print([in, string]const char* str);
+    };
+};
