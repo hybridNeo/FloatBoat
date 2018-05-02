@@ -5,10 +5,28 @@ enclave {
         /* define ECALLs here. */
         public int generate_random_number(void);
         public void ecall_start_raft([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
+
+        public char* ecall_heartbeat_handler( [in,string]const char* request, [in,string] const char* r_ep);
+
     };
 
     untrusted {
         /* define OCALLs here. */
         void ocall_print([in, string]const char* str);
+        void ocall_heartbeat_server(int port);
+
+        [cdecl] void sgx_oc_cpuidex([out] int cpuinfo[4], int leaf, int subleaf);
+
+        /* Go outside and wait on my untrusted event */
+        [cdecl] int sgx_thread_wait_untrusted_event_ocall([user_check] const void *self);
+
+        /* Wake a thread waiting on its untrusted event */
+        [cdecl] int sgx_thread_set_untrusted_event_ocall([user_check] const void *waiter);
+
+        /* Wake a thread waiting on its untrusted event, and wait on my untrusted event */
+        [cdecl] int sgx_thread_setwait_untrusted_events_ocall([user_check] const void *waiter, [user_check] const void *self);
+
+        /* Wake multiple threads waiting on their untrusted events */
+        [cdecl] int sgx_thread_set_multiple_untrusted_events_ocall([in, count = total] const void **waiters, size_t total);
     };
 };

@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <iostream>
+#include <thread>
+
 #include "Enclave_u.h"
 #include "sgx_urts.h"
 #include "sgx_utils/sgx_utils.h"
-#include <node.hpp>
+#include "com.hpp"
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
 
@@ -11,6 +13,36 @@ sgx_enclave_id_t global_eid = 0;
 void ocall_print(const char* str) {
     printf("%s\n", str);
 }
+
+std::string heartbeat_handler(std::string& request, udp::endpoint r_ep){
+    char **a = (char**)malloc(100*100);
+    ecall_heartbeat_handler(global_eid, a, request.c_str() ,r_ep.address().to_string().c_str());
+    return *a;
+}
+
+void heartbeat_server_t(int port){
+    try{
+
+        std::cout << "port is " << port << std::endl;
+        boost::asio::io_service io_service;
+        udp_server server(io_service, port, heartbeat_handler);
+        std::cout << "[heartbeat Server] Started    \n";
+        io_service.run();
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+
+
+void ocall_heartbeat_server(int port){
+    std::cout << "port is " << port << std::endl;
+    std::thread t(heartbeat_server_t, port);
+    t.detach();
+}
+
 
 int main(int argc,const char* argv[]){
     //std::string ip_addr = argv[1];
