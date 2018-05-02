@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <thread>
-
+#include <mutex>
+#include <condition_variable>
 #include "Enclave_u.h"
 #include "sgx_urts.h"
 #include "sgx_utils/sgx_utils.h"
@@ -47,6 +48,107 @@ void ocall_start_node(const char* ip_addr,const char* port,const char* intro_ip 
     t.detach();
 }
 
+void ocall_sleep(int time){
+    std::this_thread::sleep_for(std::chrono::milliseconds(time));
+}
+
+/*
+ * @param string request
+ * @param string r_ep
+ */
+std::string api_handler(std::string& request, udp::endpoint r_ep){
+    // std::vector<std::string> vs1;
+    // boost::split(vs1, request , boost::is_any_of(";"));
+    // std::cout << "Request is " << request << std::endl ; 
+    
+    // if( vs1[0] == "SET" && vs1.size() >= 3){
+    //     log_entry l(SET,vs1[1],vs1[2]);
+    //     int id = info.log_.size();
+    //     info.log_.push_back(l);
+    //     while(info.log_[id].committed_ == false){
+
+    //     }
+    // }
+    // return "OK";
+    ecall_api_handler(global_eid, request.c_str() );
+    return "OK";
+}
+
+void ocall_f_wrapper(const char* msg,const char* host, int port)
+{
+    std::string message(msg);
+    std::string ip(host);
+    std::mutex m;
+    std::condition_variable cv;
+
+    std::thread t([&m, &cv, message,ip, port]() 
+    {
+        ecall_send_heartbeat(global_eid, message.c_str(),ip.c_str(),port);
+        cv.notify_one();
+    });
+
+    t.detach();
+
+    {
+        std::unique_lock<std::mutex> l(m);
+        if(cv.wait_for(l, std::chrono::milliseconds(1000)) == std::cv_status::timeout) 
+            throw std::runtime_error("Timeout");
+    }
+
+}
+
+void send_heartbeat_t(const char* message, const char* ip , int port){
+    ecall_send_heartbeat(global_eid, message, ip , port);
+}
+
+void ocall_send_heartbeat(const char* message, const char* ip, int port){
+    std::thread t(ocall_send_heartbeat, message, ip , port );
+    t.detach();
+}
+
+void ocall_api_server(int port){
+    try{
+
+        boost::asio::io_service io_service;
+        udp_server server(io_service, port, api_handler);
+        std::cout << "[API Server] Started on port "  << port <<  " \n";
+        io_service.run();
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+void get_vote_t(const char* ip, int port){
+    ecall_get_vote(global_eid,ip,port);
+}
+
+void ocall_get_vote(const char* ip, int port){
+    std::thread t(get_vote_t, ip , port);
+    t.detach();
+}
+
+void leader_fn_t(){
+    ecall_leader_fn(global_eid);
+}
+
+void ocall_leader_fn(){
+    std::thread t(leader_fn_t);
+    t.detach();
+
+}
+
+void start_raft_t(){
+    ecall_start_raft(global_eid);
+}
+
+void ocall_start_raft(){
+    std::thread t(start_raft_t);
+    t.detach();
+
+}
+
 char* ocall_udp_sendmsg(const char* request, const char* host, int port_no){
     std::string response;
     udp_sendmsg(request,host,port_no,response);
@@ -70,7 +172,7 @@ int main(int argc,const char* argv[]){
     }
     //int ptr;
     if (argc == 5)
-        ecall_start_raft(global_eid,argv[1],argv[2],argv[3],argv[4]);
+        ecall_start_raft_main(global_eid,argv[1],argv[2],argv[3],argv[4]);
     else
         std::cout << "Invalid Arguments, try again \n";
     

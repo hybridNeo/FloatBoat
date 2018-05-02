@@ -4,6 +4,7 @@
 #include "raft.hpp"
 #include <thread>
 #include <mutex>
+#include <sgx_trts.h>
 
 #include <condition_variable>
 #include <chrono>
@@ -109,7 +110,9 @@ void update_nodes(){
 }
 
 
-void send_heartbeat(std::string message,std::string ip, int port){
+void ecall_send_heartbeat(const char* msg,const char* host, int port){
+	std::string message(msg);;
+	std::string ip(host);
 	std::string response;
 	
 	udp_sendmsg(message,ip,port,response);
@@ -117,29 +120,27 @@ void send_heartbeat(std::string message,std::string ip, int port){
 	//t.detach();
 }
 
-void f_wrapper(std::string message,std::string ip, int port)
-{
-    // std::mutex m;
-    // std::condition_variable cv;
 
-    // std::thread t([&m, &cv, message,ip, port]() 
-    // {
-    //     send_heartbeat(message,ip,port);
-    //     cv.notify_one();
-    // });
 
-    // t.detach();
+void ecall_api_handler(const char* req){
+	std::string request(req);
+	std::vector<std::string> vs1;
+    split(vs1, request , ";");
+    //std::cout << "Request is " << request << std::endl ; 
+    ocall_print(req);
+    if( vs1[0] == "SET" && vs1.size() >= 3){
+        log_entry l(SET,vs1[1],vs1[2]);
+        int id = info.log_.size();
+        info.log_.push_back(l);
+        while(info.log_[id].committed_ == false){
 
-    // {
-    //     std::unique_lock<std::mutex> l(m);
-    //     if(cv.wait_for(l, std::chrono::milliseconds(1000)) == std::cv_status::timeout) 
-    //         throw std::runtime_error("Timeout");
-    // }
-
+        }
+    }
 }
 
 
-void leader_fn(){
+void ecall_leader_fn(){
+	ocall_api_server(API_PORT);
 	//std::thread api_t(api_server);
 	info.term_++;
 	while(1){
@@ -152,12 +153,14 @@ void leader_fn(){
 			if(info.node_list_[i].ip_addr_ != info.cur_.ip_addr_ || info.node_list_[i].port_ != info.cur_.port_){
 				//std::cout << "Heartbeating " << info.node_list_[i].ip_addr_ + " : " << info.node_list_[i].port_ << "\n";
 				try{
-					f_wrapper(message,info.node_list_[i].ip_addr_,std::stoi(info.node_list_[i].port_));
+					ocall_f_wrapper(message.c_str(),info.node_list_[i].ip_addr_.c_str(),std::stoi(info.node_list_[i].port_));
 				}catch(std::runtime_error& e){
 					//std::cout << "Thread timeout\n";
 					dead_node = i;
 					count++;
 				}
+
+				ocall_send_heartbeat(message.c_str(), info.node_list_[i].ip_addr_.c_str(), std::stoi(info.node_list_[i].port_));
 				
 				//std::thread t(send_heartbeat,message,info.node_list_[i].ip_addr_, std::stoi(info.node_list_[i].port_));	
 				//t.detach();
@@ -177,18 +180,28 @@ void leader_fn(){
 		if(dead_node != -1){
 			info.node_list_.erase(info.node_list_.begin() + dead_node);
 		}
+		ocall_sleep(HB_FREQ);
 		//std::this_thread::sleep_for(std::chrono::milliseconds(HB_FREQ));
 	}
 	
 
 }
 
-void start_raft(){
+int rand(){
+	char buf[10];
+	sgx_read_rand((unsigned char*) buf,5);
+	return atoi(buf);
+}
+
+void ecall_start_raft(){
 	
 	info.leader_tout_ = true;
-	//int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
+	int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
+	std::string printstr = "Sleeping for " + sleep_amt;
+	ocall_print(printstr.c_str());
 	//std::cout << "Sleeping for " << sleep_amt << "milliseconds \n";
 	//std::this_thread::sleep_for(std::chrono::milliseconds(sleep_amt));
+	ocall_sleep(sleep_amt);
 	//std::cout << "here1\n";
 	if(info.node_list_.size() >= NODE_THRESHOLD && info.leader_tout_ == true){
 		info.vote_m_.lock();
@@ -208,12 +221,13 @@ void start_raft(){
 	info.vote_m_.lock();
 	info.vote_available_ = true;
 	info.vote_m_.unlock();
-	start_raft();
+	ecall_start_raft();
 }
 
 int num_votes;
 std::mutex nv_m;
-void get_vote( std::string ip, int port){
+void ecall_get_vote( const char* ip_add, int port){
+	std::string ip(ip_add);
 	std::string message = "ELECT;" + info.cur_.ip_addr_ + ";" + info.cur_.port_ ;
 	std::string response;
 	try{
@@ -235,16 +249,19 @@ void start_election(){
 	num_votes = 0;
 
 	for(int i =0; i < info.node_list_.size();++i){
-		// std::thread s(get_vote, info.node_list_[i].ip_addr_, std::stoi(info.node_list_[i].port_));
+		ocall_get_vote(info.node_list_[i].ip_addr_.c_str(), std::stoi(info.node_list_[i].port_));
 		// s.detach();
 	}
+	ocall_sleep(VOTE_TIME);
 	//std::this_thread::sleep_for(std::chrono::milliseconds(VOTE_TIME));
 	if(num_votes+1 > (info.node_list_.size()/2)){
+		ocall_print("Leader Elected");
+		ocall_leader_fn();
 		//std::cout << "Leader Elected \n";
 		// std::thread t(leader_fn);
 		// t.detach();
 	}else{
-		start_raft();
+		ecall_start_raft();
 	}
 	//std::cout << "num votes is " << num_votes << "\n";
 
@@ -337,23 +354,21 @@ void ecall_s_node(const char* ip_addr, const char* port, const char* intro_ip, c
 	else{
 		std::string response;
 		std::string message = "JOIN;" + u_port;
-		try{
-	        udp_sendmsg(message, i_ip_addr, std::stoi(i_port), response);
-	    }catch(...){
-	    	ocall_print("[ENCLAVE]Error in start_node \n");
-	    }
+	    udp_sendmsg(message, i_ip_addr, std::stoi(i_port), response);
+	  
 	    //std::cout << "Response is " << response << std::endl;
 	    info.deserialize(response);
 	}
 }
 
-void ecall_start_raft(const char* ip_addr, const char* port, const char* intro_ip, const char* intro_port){
+void ecall_start_raft_main(const char* ip_addr, const char* port, const char* intro_ip, const char* intro_port){
 	info.cur_.port_ = port;
 	info.cur_.ip_addr_ = ip_addr;
 
 	ocall_heartbeat_server(std::stoi(port));
 	ocall_start_node(ip_addr,port,intro_ip,intro_port);
 	//std::thread t2(start_node, u_ip_addr,u_port,i_ip_addr,i_port);
+	ocall_start_raft();
 	//std::thread t3(start_raft);
 	while(1){
 		

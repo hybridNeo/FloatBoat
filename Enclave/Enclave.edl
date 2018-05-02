@@ -4,18 +4,35 @@ enclave {
     trusted {
         /* define ECALLs here. */
         public int generate_random_number(void);
-        public void ecall_start_raft([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
+        public void ecall_start_raft_main([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
         public void ecall_s_node([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
 
         public char* ecall_heartbeat_handler( [in,string]const char* request, [in,string] const char* r_ep);
+
+        public void ecall_start_raft(void);
+
+        public void ecall_get_vote( [in,string]const char* ip, int port);
+
+        public void ecall_leader_fn();
+
+        public void ecall_api_handler( [in,string] const char* request );
+
+        public void ecall_send_heartbeat( [in,string] const char* message, [in,string] const char* ip , int port);
 
     };
 
     untrusted {
         /* define OCALLs here. */
         void ocall_print([in, string]const char* str);
+        void ocall_start_raft();
+        void ocall_sleep(int time);
+        void ocall_get_vote([in,string] const char* ip, int port);
         void ocall_heartbeat_server(int port);
+        void ocall_leader_fn();
+        void ocall_api_server(int port);
         void ocall_start_node([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
+        void ocall_send_heartbeat([in,string] const char * request, [in,string] const char* host , int port_no);
+        void ocall_f_wrapper([in,string] const char * request, [in,string] const char* host , int port_no);
         char* ocall_udp_sendmsg([in,string]const char* request, [in,string] const char* host, int port_no);
         [cdecl] void sgx_oc_cpuidex([out] int cpuinfo[4], int leaf, int subleaf);
 

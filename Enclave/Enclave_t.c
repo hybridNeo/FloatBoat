@@ -21,12 +21,12 @@ typedef struct ms_generate_random_number_t {
 	int ms_retval;
 } ms_generate_random_number_t;
 
-typedef struct ms_ecall_start_raft_t {
+typedef struct ms_ecall_start_raft_main_t {
 	char* ms_ip_addr;
 	char* ms_port;
 	char* ms_intro_ip;
 	char* ms_intro_port;
-} ms_ecall_start_raft_t;
+} ms_ecall_start_raft_main_t;
 
 typedef struct ms_ecall_s_node_t {
 	char* ms_ip_addr;
@@ -40,6 +40,21 @@ typedef struct ms_ecall_heartbeat_handler_t {
 	char* ms_request;
 	char* ms_r_ep;
 } ms_ecall_heartbeat_handler_t;
+
+typedef struct ms_ecall_get_vote_t {
+	char* ms_ip;
+	int ms_port;
+} ms_ecall_get_vote_t;
+
+typedef struct ms_ecall_api_handler_t {
+	char* ms_request;
+} ms_ecall_api_handler_t;
+
+typedef struct ms_ecall_send_heartbeat_t {
+	char* ms_message;
+	char* ms_ip;
+	int ms_port;
+} ms_ecall_send_heartbeat_t;
 
 typedef struct ms_seal_t {
 	sgx_status_t ms_retval;
@@ -61,9 +76,22 @@ typedef struct ms_ocall_print_t {
 	char* ms_str;
 } ms_ocall_print_t;
 
+typedef struct ms_ocall_sleep_t {
+	int ms_time;
+} ms_ocall_sleep_t;
+
+typedef struct ms_ocall_get_vote_t {
+	char* ms_ip;
+	int ms_port;
+} ms_ocall_get_vote_t;
+
 typedef struct ms_ocall_heartbeat_server_t {
 	int ms_port;
 } ms_ocall_heartbeat_server_t;
+
+typedef struct ms_ocall_api_server_t {
+	int ms_port;
+} ms_ocall_api_server_t;
 
 typedef struct ms_ocall_start_node_t {
 	char* ms_ip_addr;
@@ -71,6 +99,18 @@ typedef struct ms_ocall_start_node_t {
 	char* ms_intro_ip;
 	char* ms_intro_port;
 } ms_ocall_start_node_t;
+
+typedef struct ms_ocall_send_heartbeat_t {
+	char* ms_request;
+	char* ms_host;
+	int ms_port_no;
+} ms_ocall_send_heartbeat_t;
+
+typedef struct ms_ocall_f_wrapper_t {
+	char* ms_request;
+	char* ms_host;
+	int ms_port_no;
+} ms_ocall_f_wrapper_t;
 
 typedef struct ms_ocall_udp_sendmsg_t {
 	char* ms_retval;
@@ -120,10 +160,10 @@ static sgx_status_t SGX_CDECL sgx_generate_random_number(void* pms)
 	return status;
 }
 
-static sgx_status_t SGX_CDECL sgx_ecall_start_raft(void* pms)
+static sgx_status_t SGX_CDECL sgx_ecall_start_raft_main(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_ecall_start_raft_t));
-	ms_ecall_start_raft_t* ms = SGX_CAST(ms_ecall_start_raft_t*, pms);
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_start_raft_main_t));
+	ms_ecall_start_raft_main_t* ms = SGX_CAST(ms_ecall_start_raft_main_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_ip_addr = ms->ms_ip_addr;
 	size_t _len_ip_addr = _tmp_ip_addr ? strlen(_tmp_ip_addr) + 1 : 0;
@@ -183,7 +223,7 @@ static sgx_status_t SGX_CDECL sgx_ecall_start_raft(void* pms)
 		memcpy((void*)_in_intro_port, _tmp_intro_port, _len_intro_port);
 		_in_intro_port[_len_intro_port - 1] = '\0';
 	}
-	ecall_start_raft((const char*)_in_ip_addr, (const char*)_in_port, (const char*)_in_intro_ip, (const char*)_in_intro_port);
+	ecall_start_raft_main((const char*)_in_ip_addr, (const char*)_in_port, (const char*)_in_intro_ip, (const char*)_in_intro_port);
 err:
 	if (_in_ip_addr) free((void*)_in_ip_addr);
 	if (_in_port) free((void*)_in_port);
@@ -309,6 +349,121 @@ err:
 	return status;
 }
 
+static sgx_status_t SGX_CDECL sgx_ecall_start_raft(void* pms)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
+	ecall_start_raft();
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_get_vote(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_get_vote_t));
+	ms_ecall_get_vote_t* ms = SGX_CAST(ms_ecall_get_vote_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	char* _tmp_ip = ms->ms_ip;
+	size_t _len_ip = _tmp_ip ? strlen(_tmp_ip) + 1 : 0;
+	char* _in_ip = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_ip, _len_ip);
+
+	if (_tmp_ip != NULL && _len_ip != 0) {
+		_in_ip = (char*)malloc(_len_ip);
+		if (_in_ip == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy((void*)_in_ip, _tmp_ip, _len_ip);
+		_in_ip[_len_ip - 1] = '\0';
+	}
+	ecall_get_vote((const char*)_in_ip, ms->ms_port);
+err:
+	if (_in_ip) free((void*)_in_ip);
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_leader_fn(void* pms)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
+	ecall_leader_fn();
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_api_handler(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_api_handler_t));
+	ms_ecall_api_handler_t* ms = SGX_CAST(ms_ecall_api_handler_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	char* _tmp_request = ms->ms_request;
+	size_t _len_request = _tmp_request ? strlen(_tmp_request) + 1 : 0;
+	char* _in_request = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_request, _len_request);
+
+	if (_tmp_request != NULL && _len_request != 0) {
+		_in_request = (char*)malloc(_len_request);
+		if (_in_request == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy((void*)_in_request, _tmp_request, _len_request);
+		_in_request[_len_request - 1] = '\0';
+	}
+	ecall_api_handler((const char*)_in_request);
+err:
+	if (_in_request) free((void*)_in_request);
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_send_heartbeat(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_send_heartbeat_t));
+	ms_ecall_send_heartbeat_t* ms = SGX_CAST(ms_ecall_send_heartbeat_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	char* _tmp_message = ms->ms_message;
+	size_t _len_message = _tmp_message ? strlen(_tmp_message) + 1 : 0;
+	char* _in_message = NULL;
+	char* _tmp_ip = ms->ms_ip;
+	size_t _len_ip = _tmp_ip ? strlen(_tmp_ip) + 1 : 0;
+	char* _in_ip = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_message, _len_message);
+	CHECK_UNIQUE_POINTER(_tmp_ip, _len_ip);
+
+	if (_tmp_message != NULL && _len_message != 0) {
+		_in_message = (char*)malloc(_len_message);
+		if (_in_message == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy((void*)_in_message, _tmp_message, _len_message);
+		_in_message[_len_message - 1] = '\0';
+	}
+	if (_tmp_ip != NULL && _len_ip != 0) {
+		_in_ip = (char*)malloc(_len_ip);
+		if (_in_ip == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy((void*)_in_ip, _tmp_ip, _len_ip);
+		_in_ip[_len_ip - 1] = '\0';
+	}
+	ecall_send_heartbeat((const char*)_in_message, (const char*)_in_ip, ms->ms_port);
+err:
+	if (_in_message) free((void*)_in_message);
+	if (_in_ip) free((void*)_in_ip);
+
+	return status;
+}
+
 static sgx_status_t SGX_CDECL sgx_seal(void* pms)
 {
 	CHECK_REF_POINTER(pms, sizeof(ms_seal_t));
@@ -401,14 +556,19 @@ err:
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[6];
+	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[11];
 } g_ecall_table = {
-	6,
+	11,
 	{
 		{(void*)(uintptr_t)sgx_generate_random_number, 0},
-		{(void*)(uintptr_t)sgx_ecall_start_raft, 0},
+		{(void*)(uintptr_t)sgx_ecall_start_raft_main, 0},
 		{(void*)(uintptr_t)sgx_ecall_s_node, 0},
 		{(void*)(uintptr_t)sgx_ecall_heartbeat_handler, 0},
+		{(void*)(uintptr_t)sgx_ecall_start_raft, 0},
+		{(void*)(uintptr_t)sgx_ecall_get_vote, 0},
+		{(void*)(uintptr_t)sgx_ecall_leader_fn, 0},
+		{(void*)(uintptr_t)sgx_ecall_api_handler, 0},
+		{(void*)(uintptr_t)sgx_ecall_send_heartbeat, 0},
 		{(void*)(uintptr_t)sgx_seal, 0},
 		{(void*)(uintptr_t)sgx_unseal, 0},
 	}
@@ -416,19 +576,26 @@ SGX_EXTERNC const struct {
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[9][6];
+	uint8_t entry_table[16][11];
 } g_dyn_entry_table = {
-	9,
+	16,
 	{
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 
@@ -470,6 +637,77 @@ sgx_status_t SGX_CDECL ocall_print(const char* str)
 	return status;
 }
 
+sgx_status_t SGX_CDECL ocall_start_raft()
+{
+	sgx_status_t status = SGX_SUCCESS;
+	status = sgx_ocall(1, NULL);
+
+	return status;
+}
+
+sgx_status_t SGX_CDECL ocall_sleep(int time)
+{
+	sgx_status_t status = SGX_SUCCESS;
+
+	ms_ocall_sleep_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_sleep_t);
+	void *__tmp = NULL;
+
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_sleep_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_sleep_t));
+
+	ms->ms_time = time;
+	status = sgx_ocall(2, ms);
+
+
+	sgx_ocfree();
+	return status;
+}
+
+sgx_status_t SGX_CDECL ocall_get_vote(const char* ip, int port)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_ip = ip ? strlen(ip) + 1 : 0;
+
+	ms_ocall_get_vote_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_get_vote_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (ip != NULL && sgx_is_within_enclave(ip, _len_ip)) ? _len_ip : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_get_vote_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_get_vote_t));
+
+	if (ip != NULL && sgx_is_within_enclave(ip, _len_ip)) {
+		ms->ms_ip = (char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_ip);
+		memcpy((void*)ms->ms_ip, ip, _len_ip);
+	} else if (ip == NULL) {
+		ms->ms_ip = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	ms->ms_port = port;
+	status = sgx_ocall(3, ms);
+
+
+	sgx_ocfree();
+	return status;
+}
+
 sgx_status_t SGX_CDECL ocall_heartbeat_server(int port)
 {
 	sgx_status_t status = SGX_SUCCESS;
@@ -488,7 +726,40 @@ sgx_status_t SGX_CDECL ocall_heartbeat_server(int port)
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_heartbeat_server_t));
 
 	ms->ms_port = port;
-	status = sgx_ocall(1, ms);
+	status = sgx_ocall(4, ms);
+
+
+	sgx_ocfree();
+	return status;
+}
+
+sgx_status_t SGX_CDECL ocall_leader_fn()
+{
+	sgx_status_t status = SGX_SUCCESS;
+	status = sgx_ocall(5, NULL);
+
+	return status;
+}
+
+sgx_status_t SGX_CDECL ocall_api_server(int port)
+{
+	sgx_status_t status = SGX_SUCCESS;
+
+	ms_ocall_api_server_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_api_server_t);
+	void *__tmp = NULL;
+
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_api_server_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_api_server_t));
+
+	ms->ms_port = port;
+	status = sgx_ocall(6, ms);
 
 
 	sgx_ocfree();
@@ -564,7 +835,109 @@ sgx_status_t SGX_CDECL ocall_start_node(const char* ip_addr, const char* port, c
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	
-	status = sgx_ocall(2, ms);
+	status = sgx_ocall(7, ms);
+
+
+	sgx_ocfree();
+	return status;
+}
+
+sgx_status_t SGX_CDECL ocall_send_heartbeat(const char* request, const char* host, int port_no)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_request = request ? strlen(request) + 1 : 0;
+	size_t _len_host = host ? strlen(host) + 1 : 0;
+
+	ms_ocall_send_heartbeat_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_send_heartbeat_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (request != NULL && sgx_is_within_enclave(request, _len_request)) ? _len_request : 0;
+	ocalloc_size += (host != NULL && sgx_is_within_enclave(host, _len_host)) ? _len_host : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_send_heartbeat_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_send_heartbeat_t));
+
+	if (request != NULL && sgx_is_within_enclave(request, _len_request)) {
+		ms->ms_request = (char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_request);
+		memcpy((void*)ms->ms_request, request, _len_request);
+	} else if (request == NULL) {
+		ms->ms_request = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	if (host != NULL && sgx_is_within_enclave(host, _len_host)) {
+		ms->ms_host = (char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_host);
+		memcpy((void*)ms->ms_host, host, _len_host);
+	} else if (host == NULL) {
+		ms->ms_host = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	ms->ms_port_no = port_no;
+	status = sgx_ocall(8, ms);
+
+
+	sgx_ocfree();
+	return status;
+}
+
+sgx_status_t SGX_CDECL ocall_f_wrapper(const char* request, const char* host, int port_no)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_request = request ? strlen(request) + 1 : 0;
+	size_t _len_host = host ? strlen(host) + 1 : 0;
+
+	ms_ocall_f_wrapper_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_f_wrapper_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (request != NULL && sgx_is_within_enclave(request, _len_request)) ? _len_request : 0;
+	ocalloc_size += (host != NULL && sgx_is_within_enclave(host, _len_host)) ? _len_host : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_f_wrapper_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_f_wrapper_t));
+
+	if (request != NULL && sgx_is_within_enclave(request, _len_request)) {
+		ms->ms_request = (char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_request);
+		memcpy((void*)ms->ms_request, request, _len_request);
+	} else if (request == NULL) {
+		ms->ms_request = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	if (host != NULL && sgx_is_within_enclave(host, _len_host)) {
+		ms->ms_host = (char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_host);
+		memcpy((void*)ms->ms_host, host, _len_host);
+	} else if (host == NULL) {
+		ms->ms_host = NULL;
+	} else {
+		sgx_ocfree();
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	
+	ms->ms_port_no = port_no;
+	status = sgx_ocall(9, ms);
 
 
 	sgx_ocfree();
@@ -615,7 +988,7 @@ sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** retval, const char* request, con
 	}
 	
 	ms->ms_port_no = port_no;
-	status = sgx_ocall(3, ms);
+	status = sgx_ocall(10, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -655,7 +1028,7 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 	
 	ms->ms_leaf = leaf;
 	ms->ms_subleaf = subleaf;
-	status = sgx_ocall(4, ms);
+	status = sgx_ocall(11, ms);
 
 	if (cpuinfo) memcpy((void*)cpuinfo, ms->ms_cpuinfo, _len_cpuinfo);
 
@@ -681,7 +1054,7 @@ sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const 
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_wait_untrusted_event_ocall_t));
 
 	ms->ms_self = SGX_CAST(void*, self);
-	status = sgx_ocall(5, ms);
+	status = sgx_ocall(12, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -707,7 +1080,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const v
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_set_untrusted_event_ocall_t));
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
-	status = sgx_ocall(6, ms);
+	status = sgx_ocall(13, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -734,7 +1107,7 @@ sgx_status_t SGX_CDECL sgx_thread_setwait_untrusted_events_ocall(int* retval, co
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
 	ms->ms_self = SGX_CAST(void*, self);
-	status = sgx_ocall(7, ms);
+	status = sgx_ocall(14, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
@@ -773,7 +1146,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 	}
 	
 	ms->ms_total = total;
-	status = sgx_ocall(8, ms);
+	status = sgx_ocall(15, ms);
 
 	if (retval) *retval = ms->ms_retval;
 
