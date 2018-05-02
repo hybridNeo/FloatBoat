@@ -349,11 +349,11 @@ err:
 	return status;
 }
 
-static sgx_status_t SGX_CDECL sgx_ecall_start_raft(void* pms)
+static sgx_status_t SGX_CDECL sgx_ecall_straft(void* pms)
 {
 	sgx_status_t status = SGX_SUCCESS;
 	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
-	ecall_start_raft();
+	ecall_straft();
 	return status;
 }
 
@@ -564,7 +564,7 @@ SGX_EXTERNC const struct {
 		{(void*)(uintptr_t)sgx_ecall_start_raft_main, 0},
 		{(void*)(uintptr_t)sgx_ecall_s_node, 0},
 		{(void*)(uintptr_t)sgx_ecall_heartbeat_handler, 0},
-		{(void*)(uintptr_t)sgx_ecall_start_raft, 0},
+		{(void*)(uintptr_t)sgx_ecall_straft, 0},
 		{(void*)(uintptr_t)sgx_ecall_get_vote, 0},
 		{(void*)(uintptr_t)sgx_ecall_leader_fn, 0},
 		{(void*)(uintptr_t)sgx_ecall_api_handler, 0},
@@ -637,7 +637,7 @@ sgx_status_t SGX_CDECL ocall_print(const char* str)
 	return status;
 }
 
-sgx_status_t SGX_CDECL ocall_start_raft()
+sgx_status_t SGX_CDECL ocall_straft()
 {
 	sgx_status_t status = SGX_SUCCESS;
 	status = sgx_ocall(1, NULL);

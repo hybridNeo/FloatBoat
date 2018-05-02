@@ -9,7 +9,7 @@ enclave {
 
         public char* ecall_heartbeat_handler( [in,string]const char* request, [in,string] const char* r_ep);
 
-        public void ecall_start_raft(void);
+        public void ecall_straft(void);
 
         public void ecall_get_vote( [in,string]const char* ip, int port);
 
@@ -24,7 +24,7 @@ enclave {
     untrusted {
         /* define OCALLs here. */
         void ocall_print([in, string]const char* str);
-        void ocall_start_raft();
+        void ocall_straft();
         void ocall_sleep(int time);
         void ocall_get_vote([in,string] const char* ip, int port);
         void ocall_heartbeat_server(int port);

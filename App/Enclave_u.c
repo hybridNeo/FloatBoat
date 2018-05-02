@@ -139,10 +139,10 @@ static sgx_status_t SGX_CDECL Enclave_ocall_print(void* pms)
 	return SGX_SUCCESS;
 }
 
-static sgx_status_t SGX_CDECL Enclave_ocall_start_raft(void* pms)
+static sgx_status_t SGX_CDECL Enclave_ocall_straft(void* pms)
 {
 	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
-	ocall_start_raft();
+	ocall_straft();
 	return SGX_SUCCESS;
 }
 
@@ -264,7 +264,7 @@ static const struct {
 	16,
 	{
 		(void*)Enclave_ocall_print,
-		(void*)Enclave_ocall_start_raft,
+		(void*)Enclave_ocall_straft,
 		(void*)Enclave_ocall_sleep,
 		(void*)Enclave_ocall_get_vote,
 		(void*)Enclave_ocall_heartbeat_server,
@@ -325,7 +325,7 @@ sgx_status_t ecall_heartbeat_handler(sgx_enclave_id_t eid, char** retval, const 
 	return status;
 }
 
-sgx_status_t ecall_start_raft(sgx_enclave_id_t eid)
+sgx_status_t ecall_straft(sgx_enclave_id_t eid)
 {
 	sgx_status_t status;
 	status = sgx_ecall(eid, 4, &ocall_table_Enclave, NULL);

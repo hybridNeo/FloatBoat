@@ -97,15 +97,11 @@ void update_nodes(){
 	for(int i =0; i < info.node_list_.size()-1;++i){
 		std::string message = "UPDATE;" + info.serialize();
 		std::string response;
-	    try{
-	    	if(info.node_list_[i].ip_addr_ != info.cur_.ip_addr_ && info.node_list_[i].port_ != info.cur_.port_){
-	    		udp_sendmsg(message, info.node_list_[i].ip_addr_, std::stoi(info.node_list_[i].port_), response);
+	    if(info.node_list_[i].ip_addr_ != info.cur_.ip_addr_ && info.node_list_[i].port_ != info.cur_.port_){
+	    	udp_sendmsg(message, info.node_list_[i].ip_addr_, std::stoi(info.node_list_[i].port_), response);
 	    		
-	    	}
-	    }catch(...){
-	    	ocall_print("[ENCLAVE] error in update_nodes\n ");
-	    	//std::cout << "Error sending message\n";
 	    }
+	   
 	} 
 }
 
@@ -193,35 +189,35 @@ int rand(){
 	return atoi(buf);
 }
 
-void ecall_start_raft(){
+void ecall_straft(){
 	
-	info.leader_tout_ = true;
-	int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
-	std::string printstr = "Sleeping for " + sleep_amt;
-	ocall_print(printstr.c_str());
-	//std::cout << "Sleeping for " << sleep_amt << "milliseconds \n";
-	//std::this_thread::sleep_for(std::chrono::milliseconds(sleep_amt));
-	ocall_sleep(sleep_amt);
-	//std::cout << "here1\n";
-	if(info.node_list_.size() >= NODE_THRESHOLD && info.leader_tout_ == true){
-		info.vote_m_.lock();
-		if(info.vote_available_ == true){
-			//std::cout << "here2\n";
-			info.vote_available_ = false;
-			info.vote_m_.unlock();
-			start_election();
-			return;
+	// info.leader_tout_ = true;
+	// int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
+	// // std::string printstr = "Sleeping for " + sleep_amt;
+	// ocall_print(printstr.c_str());
+	// //std::cout << "Sleeping for " << sleep_amt << "milliseconds \n";
+	// //std::this_thread::sleep_for(std::chrono::milliseconds(sleep_amt));
+	// ocall_sleep(sleep_amt);
+	// //std::cout << "here1\n";
+	// if(info.node_list_.size() >= NODE_THRESHOLD && info.leader_tout_ == true){
+	// 	info.vote_m_.lock();
+	// 	if(info.vote_available_ == true){
+	// 		//std::cout << "here2\n";
+	// 		info.vote_available_ = false;
+	// 		info.vote_m_.unlock();
+	// 		start_election();
+	// 		return;
 
-		}else{
-			//send_heartbeat();
-			info.vote_m_.unlock();
-		}
+	// 	}else{
+	// 		//send_heartbeat();
+	// 		info.vote_m_.unlock();
+	// 	}
 		
-	}
-	info.vote_m_.lock();
-	info.vote_available_ = true;
-	info.vote_m_.unlock();
-	ecall_start_raft();
+	// }
+	// info.vote_m_.lock();
+	// info.vote_available_ = true;
+	// info.vote_m_.unlock();
+	// ecall_start_raft();
 }
 
 int num_votes;
@@ -230,12 +226,9 @@ void ecall_get_vote( const char* ip_add, int port){
 	std::string ip(ip_add);
 	std::string message = "ELECT;" + info.cur_.ip_addr_ + ";" + info.cur_.port_ ;
 	std::string response;
-	try{
-		udp_sendmsg(message,ip,port,response);
-	}
-	catch(std::exception& e){
-		//std::cout << "Unable to contact host " << "\n";
-	}
+	udp_sendmsg(message,ip,port,response);
+	
+	
 	
 	if(response == "OK"){
 		nv_m.lock();
@@ -261,7 +254,7 @@ void start_election(){
 		// std::thread t(leader_fn);
 		// t.detach();
 	}else{
-		ecall_start_raft();
+		ecall_straft();
 	}
 	//std::cout << "num votes is " << num_votes << "\n";
 
@@ -342,10 +335,10 @@ void ecall_s_node(const char* ip_addr, const char* port, const char* intro_ip, c
 	std::string u_port(port);
 	std::string i_ip_addr(intro_ip);
 	std::string i_port(intro_port);
-	// ocall_print(ip_addr);
-	// ocall_print(port);
-	// ocall_print(intro_ip);
-	// ocall_print(intro_port);
+	ocall_print(ip_addr);
+	ocall_print(port);
+	ocall_print(intro_ip);
+	ocall_print(intro_port);
 	if(u_ip_addr == i_ip_addr && u_port == i_port){
 		//case where this is the first node
 		//ocall_print("HERE\n");
@@ -368,7 +361,7 @@ void ecall_start_raft_main(const char* ip_addr, const char* port, const char* in
 	ocall_heartbeat_server(std::stoi(port));
 	ocall_start_node(ip_addr,port,intro_ip,intro_port);
 	//std::thread t2(start_node, u_ip_addr,u_port,i_ip_addr,i_port);
-	ocall_start_raft();
+	ecall_straft();
 	//std::thread t3(start_raft);
 	while(1){
 		

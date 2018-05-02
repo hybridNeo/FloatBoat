@@ -140,10 +140,10 @@ void ocall_leader_fn(){
 }
 
 void start_raft_t(){
-    ecall_start_raft(global_eid);
+    ecall_straft(global_eid);
 }
 
-void ocall_start_raft(){
+void ocall_straft(){
     std::thread t(start_raft_t);
     t.detach();
 
