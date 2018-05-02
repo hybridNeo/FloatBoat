@@ -12,6 +12,13 @@ typedef struct ms_ecall_start_raft_t {
 	char* ms_intro_port;
 } ms_ecall_start_raft_t;
 
+typedef struct ms_ecall_s_node_t {
+	char* ms_ip_addr;
+	char* ms_port;
+	char* ms_intro_ip;
+	char* ms_intro_port;
+} ms_ecall_s_node_t;
+
 typedef struct ms_ecall_heartbeat_handler_t {
 	char* ms_retval;
 	char* ms_request;
@@ -41,6 +48,20 @@ typedef struct ms_ocall_print_t {
 typedef struct ms_ocall_heartbeat_server_t {
 	int ms_port;
 } ms_ocall_heartbeat_server_t;
+
+typedef struct ms_ocall_start_node_t {
+	char* ms_ip_addr;
+	char* ms_port;
+	char* ms_intro_ip;
+	char* ms_intro_port;
+} ms_ocall_start_node_t;
+
+typedef struct ms_ocall_udp_sendmsg_t {
+	char* ms_retval;
+	char* ms_request;
+	char* ms_host;
+	int ms_port_no;
+} ms_ocall_udp_sendmsg_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {
 	int* ms_cpuinfo;
@@ -82,6 +103,22 @@ static sgx_status_t SGX_CDECL Enclave_ocall_heartbeat_server(void* pms)
 {
 	ms_ocall_heartbeat_server_t* ms = SGX_CAST(ms_ocall_heartbeat_server_t*, pms);
 	ocall_heartbeat_server(ms->ms_port);
+
+	return SGX_SUCCESS;
+}
+
+static sgx_status_t SGX_CDECL Enclave_ocall_start_node(void* pms)
+{
+	ms_ocall_start_node_t* ms = SGX_CAST(ms_ocall_start_node_t*, pms);
+	ocall_start_node((const char*)ms->ms_ip_addr, (const char*)ms->ms_port, (const char*)ms->ms_intro_ip, (const char*)ms->ms_intro_port);
+
+	return SGX_SUCCESS;
+}
+
+static sgx_status_t SGX_CDECL Enclave_ocall_udp_sendmsg(void* pms)
+{
+	ms_ocall_udp_sendmsg_t* ms = SGX_CAST(ms_ocall_udp_sendmsg_t*, pms);
+	ms->ms_retval = ocall_udp_sendmsg((const char*)ms->ms_request, (const char*)ms->ms_host, ms->ms_port_no);
 
 	return SGX_SUCCESS;
 }
@@ -128,12 +165,14 @@ static sgx_status_t SGX_CDECL Enclave_sgx_thread_set_multiple_untrusted_events_o
 
 static const struct {
 	size_t nr_ocall;
-	void * table[7];
+	void * table[9];
 } ocall_table_Enclave = {
-	7,
+	9,
 	{
 		(void*)Enclave_ocall_print,
 		(void*)Enclave_ocall_heartbeat_server,
+		(void*)Enclave_ocall_start_node,
+		(void*)Enclave_ocall_udp_sendmsg,
 		(void*)Enclave_sgx_oc_cpuidex,
 		(void*)Enclave_sgx_thread_wait_untrusted_event_ocall,
 		(void*)Enclave_sgx_thread_set_untrusted_event_ocall,
@@ -162,13 +201,25 @@ sgx_status_t ecall_start_raft(sgx_enclave_id_t eid, const char* ip_addr, const c
 	return status;
 }
 
+sgx_status_t ecall_s_node(sgx_enclave_id_t eid, const char* ip_addr, const char* port, const char* intro_ip, const char* intro_port)
+{
+	sgx_status_t status;
+	ms_ecall_s_node_t ms;
+	ms.ms_ip_addr = (char*)ip_addr;
+	ms.ms_port = (char*)port;
+	ms.ms_intro_ip = (char*)intro_ip;
+	ms.ms_intro_port = (char*)intro_port;
+	status = sgx_ecall(eid, 2, &ocall_table_Enclave, &ms);
+	return status;
+}
+
 sgx_status_t ecall_heartbeat_handler(sgx_enclave_id_t eid, char** retval, const char* request, const char* r_ep)
 {
 	sgx_status_t status;
 	ms_ecall_heartbeat_handler_t ms;
 	ms.ms_request = (char*)request;
 	ms.ms_r_ep = (char*)r_ep;
-	status = sgx_ecall(eid, 2, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 3, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -181,7 +232,7 @@ sgx_status_t seal(sgx_enclave_id_t eid, sgx_status_t* retval, uint8_t* plaintext
 	ms.ms_plaintext_len = plaintext_len;
 	ms.ms_sealed_data = sealed_data;
 	ms.ms_sealed_size = sealed_size;
-	status = sgx_ecall(eid, 3, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 4, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -194,7 +245,7 @@ sgx_status_t unseal(sgx_enclave_id_t eid, sgx_status_t* retval, sgx_sealed_data_
 	ms.ms_sealed_size = sealed_size;
 	ms.ms_plaintext = plaintext;
 	ms.ms_plaintext_len = plaintext_len;
-	status = sgx_ecall(eid, 4, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 5, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }

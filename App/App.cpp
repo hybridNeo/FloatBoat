@@ -17,7 +17,9 @@ void ocall_print(const char* str) {
 std::string heartbeat_handler(std::string& request, udp::endpoint r_ep){
     char **a = (char**)malloc(100*100);
     ecall_heartbeat_handler(global_eid, a, request.c_str() ,r_ep.address().to_string().c_str());
-    return *a;
+    std::string ret(*a);
+    delete a;
+    return ret;
 }
 
 void heartbeat_server_t(int port){
@@ -35,7 +37,21 @@ void heartbeat_server_t(int port){
     }
 }
 
+void start_node_t(const char* ip_addr,const char* port,const char* intro_ip , const char* intro_port){
+    ecall_s_node(global_eid, ip_addr , port , intro_ip , intro_port );
 
+}
+
+void ocall_start_node(const char* ip_addr,const char* port,const char* intro_ip , const char* intro_port){
+    std::thread t(start_node_t,ip_addr,port,intro_ip,intro_port);
+    t.detach();
+}
+
+char* ocall_udp_sendmsg(const char* request, const char* host, int port_no){
+    std::string response;
+    udp_sendmsg(request,host,port_no,response);
+    return (char *)response.c_str();
+}
 
 void ocall_heartbeat_server(int port){
     std::cout << "port is " << port << std::endl;

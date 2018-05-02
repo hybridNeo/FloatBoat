@@ -24,6 +24,16 @@ void split(std::vector<std::string>& vs,std::string s, std::string delimiter){
 	}
 }
 
+
+void udp_sendmsg(std::string request, std::string host, int port_no, std::string& response)
+{
+    char** a = (char **)malloc(100 * 100);
+    ocall_udp_sendmsg(a, request.c_str(), host.c_str() , port_no);
+    response = (*a);
+    //ocall_udp_sendmsg(request,host,port)
+
+}
+
 class log_entry{
 public:
 	int req_type_;
