@@ -136,6 +136,7 @@ std::string api_handler(std::string& request, udp::endpoint r_ep){
 std::string heartbeat_handler(std::string& request, udp::endpoint r_ep){
 	std::vector<std::string> vs1;
     boost::split(vs1, request , boost::is_any_of(";"));
+
     std::string ret = "OK";
     if(vs1[0] == "JOIN"){
     	info_m.lock();
@@ -203,7 +204,7 @@ void heartbeat_server(int port){
     }
     catch (std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "Heartbeat server " << e.what() << std::endl;
     }
 }
 void start_node(std::string u_ip_addr, std::string u_port, std::string i_ip_addr, std::string i_port){
@@ -233,7 +234,7 @@ void api_server(){
     }
     catch (std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "API Server : " <<  e.what() << std::endl;
     }
 }
 

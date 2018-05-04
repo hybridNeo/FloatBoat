@@ -3,7 +3,8 @@ enclave {
 
     trusted {
         /* define ECALLs here. */
-        public int generate_random_number(void);
+        public char* ecall_api_handler( [in,string] const char* request );
+        
         public void ecall_start_raft_main([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
         public void ecall_s_node([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
 
@@ -15,7 +16,9 @@ enclave {
 
         public void ecall_leader_fn();
 
-        public void ecall_api_handler( [in,string] const char* request );
+        public int generate_random_number(void);
+
+        public char* ecall_ah([in,string] const char * request , [in,string] const char* ep);
 
         public void ecall_send_heartbeat( [in,string] const char* message, [in,string] const char* ip , int port);
 
@@ -25,6 +28,8 @@ enclave {
         /* define OCALLs here. */
         void ocall_print([in, string]const char* str);
         void ocall_straft();
+        void ocall_set(int id, int state);
+        int ocall_get(int id);
         void ocall_sleep(int time);
         void ocall_get_vote([in,string] const char* ip, int port);
         void ocall_heartbeat_server(int port);

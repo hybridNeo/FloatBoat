@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include "sgx_utils/sgx_utils.h"
 #include "com.hpp"
+#include <map>
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
 
@@ -16,16 +17,53 @@ void ocall_print(const char* str) {
     printf("%s\n", str);
 }
 
-
+std::map<int,int> m;
+void ocall_set(int id, int state){
+    m[id] = state;
+    if(state == 1){
+        std::cout << "set to 1 \n";
+    }
+}
+int ocall_get(int id){
+    return m[id];
+}
 
 std::string heartbeat_handler(std::string& request, udp::endpoint r_ep){
     char **a = (char**)malloc(100*100);
     ecall_heartbeat_handler(global_eid, a, request.c_str() ,r_ep.address().to_string().c_str());
     std::string ret(*a);
-    delete a;
+    free(a);
     return ret;
 }
 
+
+/*
+ * @param string request
+ * @param string r_ep
+ */
+std::string api_handler(std::string& request, udp::endpoint r_ep){
+    std::cout << "API REQ " << request << std::endl;
+    char **a = (char**)malloc(100*100);
+    ecall_api_handler(global_eid, a , request.c_str());
+    std::string ret(*a);
+    free(a);
+    return ret;
+}
+
+
+void api_server_t(int port){
+    try{
+
+        boost::asio::io_service io_service;
+        udp_server server(io_service, port, api_handler);
+        std::cout << "[API Server] Started on port "  << port <<  " \n";
+        io_service.run();
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "API server " <<  e.what() << std::endl;
+    }
+}
 void heartbeat_server_t(int port){
     try{
 
@@ -42,20 +80,20 @@ void heartbeat_server_t(int port){
 }
 
 void start_node_t(const char* ip_addr,const char* port,const char* intro_ip , const char* intro_port){
-    std::cout << " start node " << ip_addr << port << intro_ip << intro_port << std::endl;
+    //std::cout << " start node " << ip_addr << port << intro_ip << intro_port << std::endl;
 
     ecall_s_node(global_eid, ip_addr , port , intro_ip , intro_port );
 
 }
 
 void ocall_start_node(const char* ip_addr,const char* port,const char* intro_ip , const char* intro_port){
-    std::cout << "ocall " << ip_addr << port << intro_ip << intro_port << std::endl;
+    //std::cout << "ocall " << ip_addr << port << intro_ip << intro_port << std::endl;
     // For some reason the memory is encryped here 
     std::string n_ip_addr(ip_addr);
     std::string n_port(port);
     std::string n_intro_ip(intro_ip);
     std::string n_intro_port(intro_port);
-    std::cout << "ocall2 " << n_ip_addr.c_str() << n_port.c_str() << n_intro_ip.c_str() << n_intro_port.c_str() << std::endl;
+    //std::cout << "ocall2 " << n_ip_addr.c_str() << n_port.c_str() << n_intro_ip.c_str() << n_intro_port.c_str() << std::endl;
 
     std::thread t(start_node_t,n_ip_addr.c_str(),n_port.c_str(), n_intro_ip.c_str(), n_intro_port.c_str());
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -67,37 +105,18 @@ void ocall_sleep(int time){
     //usleep(time);
 }
 
-/*
- * @param string request
- * @param string r_ep
- */
-std::string api_handler(std::string& request, udp::endpoint r_ep){
-    // std::vector<std::string> vs1;
-    // boost::split(vs1, request , boost::is_any_of(";"));
-    // std::cout << "Request is " << request << std::endl ; 
-    
-    // if( vs1[0] == "SET" && vs1.size() >= 3){
-    //     log_entry l(SET,vs1[1],vs1[2]);
-    //     int id = info.log_.size();
-    //     info.log_.push_back(l);
-    //     while(info.log_[id].committed_ == false){
-
-    //     }
-    // }
-    // return "OK";
-    ecall_api_handler(global_eid, request.c_str() );
-    return "OK";
-}
 
 void ocall_f_wrapper(const char* msg,const char* host, int port)
 {
     std::string message(msg);
+    //std::cout << "message is " << message << "msg" << std::endl; 
     std::string ip(host);
     std::mutex m;
     std::condition_variable cv;
 
     std::thread t([&m, &cv, message,ip, port]() 
     {
+        //std::cout << "Message is " << message << " ip "  << ip << " port " << port << std::endl;
         ecall_send_heartbeat(global_eid, message.c_str(),ip.c_str(),port);
         cv.notify_one();
     });
@@ -106,7 +125,7 @@ void ocall_f_wrapper(const char* msg,const char* host, int port)
 
     {
         std::unique_lock<std::mutex> l(m);
-        if(cv.wait_for(l, std::chrono::milliseconds(1000)) == std::cv_status::timeout) 
+        if(cv.wait_for(l, std::chrono::milliseconds(10000)) == std::cv_status::timeout) 
             throw std::runtime_error("Timeout");
     }
 
@@ -118,21 +137,14 @@ void send_heartbeat_t(const char* message, const char* ip , int port){
 
 void ocall_send_heartbeat(const char* message, const char* ip, int port){
     std::thread t(ocall_send_heartbeat, message, ip , port );
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     t.detach();
 }
 
-void ocall_api_server(int port){
-    try{
 
-        boost::asio::io_service io_service;
-        udp_server server(io_service, port, api_handler);
-        std::cout << "[API Server] Started on port "  << port <<  " \n";
-        io_service.run();
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << e.what() << std::endl;
-    }
+void ocall_api_server(int port){
+    std::thread t(api_server_t, port);
+    t.detach();
 }
 
 void get_vote_t(const char* ip, int port){
@@ -171,9 +183,9 @@ void ocall_straft(){
 
 void ocall_udp_sendmsg(char ** res, const char* request, const char* host, int port_no){
     std::string response;
-    std::cout << "request is " << request << "  " << host << std::endl;
+    //std::cout << "request is " << request << "  " << host << std::endl;
     udp_sendmsg(request,host,port_no,response);
-    std::cout << "response is " << response << std::endl;
+    //std::cout << "response is " << response << std::endl;
     //return (char *)response.c_str();
     strcpy(*res,response.c_str());
 }

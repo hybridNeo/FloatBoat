@@ -137,20 +137,31 @@ void ecall_send_heartbeat(const char* msg,const char* host, int port){
 
 
 
-void ecall_api_handler(const char* req){
+char* ecall_api_handler(const char* req){
+	ocall_print("API REQQQQQQQUEST q0");
+	ocall_print(req);
+   
 	std::string request(req);
 	std::vector<std::string> vs1;
     split(vs1, request , ";");
+   
     //std::cout << "Request is " << request << std::endl ; 
-    ocall_print(req);
     if( vs1[0] == "SET" && vs1.size() >= 3){
+    	ocall_print("g1");
         log_entry l(SET,vs1[1],vs1[2]);
         int id = info.log_.size();
+        ocall_set(id,0);
         info.log_.push_back(l);
-        while(info.log_[id].committed_ == false){
-
+        int state = 0;
+        ocall_get(&state,id);
+        while(state == 0){
+        	ocall_get(&state,id);
+        	if(state == 1){
+        		ocall_print("State  is 1 \n");
+        	}
         }
     }
+    return "OK";
 }
 
 
@@ -214,7 +225,7 @@ void ecall_straft(){
 	
 	info.leader_tout_ = true;
 	int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
-	std::string printstr = "Sleeping for " + sleep_amt;
+	//std::string printstr = "Sleeping for " + sleep_amt;
 	//ocall_print("sleeping");
 	//std::cout << "Sleeping for " << sleep_amt << "milliseconds \n";
 	//std::this_thread::sleep_for(std::chrono::milliseconds(sleep_amt));
@@ -288,6 +299,27 @@ void start_election(){
 
 
 
+char* ecall_ah(const char* req, const char* r_ep){
+	
+   
+	std::string request(req);
+	std::vector<std::string> vs1;
+    ocall_print("AH API REQQQQQQQUEST q0");
+	ocall_print(req);
+    split(vs1, request , ";");
+   	
+    //std::cout << "Request is " << request << std::endl ; 
+    if( vs1[0] == "SET" && vs1.size() >= 3){
+    	ocall_print("g1");
+        log_entry l(SET,vs1[1],vs1[2]);
+        int id = info.log_.size();
+        info.log_.push_back(l);
+        while(info.log_[id].committed_ == false){
+        	ocall_sleep(100);
+        }
+    }
+    return "OK";
+}
 
 
 /*
@@ -300,6 +332,7 @@ char* ecall_heartbeat_handler(const char* req, const char* r_ep){
 	// ocall_print(req);
 	// return "OK";
 	std::string request(req);
+	ocall_print(req);
 	// ocall_print("hearbeat_handler request : ");
 	// ocall_print(request.c_str());
 	// ocall_print(r_ep);
@@ -334,6 +367,7 @@ char* ecall_heartbeat_handler(const char* req, const char* r_ep){
 
     }else if(vs1[0] == "LEADER"){
     	info.leader_tout_ = false;
+    	ocall_print("here in leader");
     	//std::cout << "heartbeat recevied\n";
     	info.term_ = max(info.term_,std::stoi(vs1[1]));
     	if(info.term_ > std::stoi(vs1[1])){
@@ -343,7 +377,10 @@ char* ecall_heartbeat_handler(const char* req, const char* r_ep){
     		std::string r_log = request.substr(vs1[0].size()+vs1[1].size() +2);
     		//std::cout << "rlog:" << r_log;
     		log_t new_log(r_log);
+    		
+    		ocall_print(std::to_string(info.log_.size()).c_str());
     		info.log_ = new_log;
+    		ocall_print(std::to_string(info.log_.size()).c_str());
     		if(info.log_.st_cnt_ > info.log_.cmt_cnt_){
     			//execute
     			for(int i= info.log_.cmt_cnt_; i <= info.log_.st_cnt_;++i ){
@@ -357,7 +394,7 @@ char* ecall_heartbeat_handler(const char* req, const char* r_ep){
     	
     }
   
-    return (char *)ret.c_str();
+    return "OK";
 }
 
 
@@ -366,7 +403,7 @@ void ecall_s_node(const char* ip_addr, const char* port, const char* intro_ip, c
 	std::string u_port(port);
 	std::string i_ip_addr(intro_ip);
 	std::string i_port(intro_port);
-	ocall_print(u_ip_addr.c_str());
+	//ocall_print(u_ip_addr.c_str());
 	// ocall_print(ip_addr);
 	// ocall_print(port);
 	// ocall_print(intro_ip);
@@ -389,7 +426,7 @@ void ecall_start_raft_main(const char* ip_addr, const char* port, const char* in
 	info.cur_.port_ = port;
 	info.cur_.ip_addr_ = ip_addr;
 	ocall_print(ip_addr);
-	ocall_print("done");
+	//ocall_print("done");
 	ocall_heartbeat_server(std::stoi(port));
 	ocall_sleep(500);
 	ocall_start_node(ip_addr,port,intro_ip,intro_port);
@@ -406,16 +443,25 @@ void ecall_start_raft_main(const char* ip_addr, const char* port, const char* in
 
 
 bool execute_cmd( int i){
-	std::string type =  "";//((info.log_[i].req_type_ == SET) ? "SET" : "GET");
-	if(info.log_[i].req_type_ == SET){
-		type = "SET";
-	}else if(info.log_[i].req_type_ == GET){
-		type = "GET";
-	}
-	if(type != ""){
-		std::string res = "Executing " + type  + " " + info.log_[i].key_ + " " + info.log_[i].val_ + "\n";
-		ocall_print(res.c_str());	
-	}
-	info.log_[i].committed_ = true;
+	ocall_print("hmp 1 ");
+	//std::string type =  "";//((info.log_[i].req_type_ == SET) ? "SET" : "GET");
+	// if(info.log_[i].req_type_ == SET){
+	// 	type = "SET";
+	// }else if(info.log_[i].req_type_ == GET){
+	// 	type = "GET";
+	// }
+	// if(type != ""){
+	// 	ocall_print("hmp 3 ");
+	// 	std::string res = "Executing " + type  + " " + info.log_[i].key_ + " " + info.log_[i].val_ + "\n";
+	// 	ocall_print("hmp 4 ");
+	// 	ocall_print(res.c_str());	
+	// }
+
+	// ocall_print(std::to_string(i).c_str());
+	// ocall_print(std::to_string(info.log_.size()).c_str());
+	// ocall_print("hmp 2");
+	
+	// info.log_[i].committed_ = true;
+	ocall_set(i,1);
 	return true;
 }

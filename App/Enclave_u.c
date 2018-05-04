@@ -1,9 +1,10 @@
 #include "Enclave_u.h"
 #include <errno.h>
 
-typedef struct ms_generate_random_number_t {
-	int ms_retval;
-} ms_generate_random_number_t;
+typedef struct ms_ecall_api_handler_t {
+	char* ms_retval;
+	char* ms_request;
+} ms_ecall_api_handler_t;
 
 typedef struct ms_ecall_start_raft_main_t {
 	char* ms_ip_addr;
@@ -30,9 +31,15 @@ typedef struct ms_ecall_get_vote_t {
 	int ms_port;
 } ms_ecall_get_vote_t;
 
-typedef struct ms_ecall_api_handler_t {
+typedef struct ms_generate_random_number_t {
+	int ms_retval;
+} ms_generate_random_number_t;
+
+typedef struct ms_ecall_ah_t {
+	char* ms_retval;
 	char* ms_request;
-} ms_ecall_api_handler_t;
+	char* ms_ep;
+} ms_ecall_ah_t;
 
 typedef struct ms_ecall_send_heartbeat_t {
 	char* ms_message;
@@ -59,6 +66,16 @@ typedef struct ms_unseal_t {
 typedef struct ms_ocall_print_t {
 	char* ms_str;
 } ms_ocall_print_t;
+
+typedef struct ms_ocall_set_t {
+	int ms_id;
+	int ms_state;
+} ms_ocall_set_t;
+
+typedef struct ms_ocall_get_t {
+	int ms_retval;
+	int ms_id;
+} ms_ocall_get_t;
 
 typedef struct ms_ocall_sleep_t {
 	int ms_time;
@@ -143,6 +160,22 @@ static sgx_status_t SGX_CDECL Enclave_ocall_straft(void* pms)
 {
 	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
 	ocall_straft();
+	return SGX_SUCCESS;
+}
+
+static sgx_status_t SGX_CDECL Enclave_ocall_set(void* pms)
+{
+	ms_ocall_set_t* ms = SGX_CAST(ms_ocall_set_t*, pms);
+	ocall_set(ms->ms_id, ms->ms_state);
+
+	return SGX_SUCCESS;
+}
+
+static sgx_status_t SGX_CDECL Enclave_ocall_get(void* pms)
+{
+	ms_ocall_get_t* ms = SGX_CAST(ms_ocall_get_t*, pms);
+	ms->ms_retval = ocall_get(ms->ms_id);
+
 	return SGX_SUCCESS;
 }
 
@@ -259,12 +292,14 @@ static sgx_status_t SGX_CDECL Enclave_sgx_thread_set_multiple_untrusted_events_o
 
 static const struct {
 	size_t nr_ocall;
-	void * table[16];
+	void * table[18];
 } ocall_table_Enclave = {
-	16,
+	18,
 	{
 		(void*)Enclave_ocall_print,
 		(void*)Enclave_ocall_straft,
+		(void*)Enclave_ocall_set,
+		(void*)Enclave_ocall_get,
 		(void*)Enclave_ocall_sleep,
 		(void*)Enclave_ocall_get_vote,
 		(void*)Enclave_ocall_heartbeat_server,
@@ -281,10 +316,11 @@ static const struct {
 		(void*)Enclave_sgx_thread_set_multiple_untrusted_events_ocall,
 	}
 };
-sgx_status_t generate_random_number(sgx_enclave_id_t eid, int* retval)
+sgx_status_t ecall_api_handler(sgx_enclave_id_t eid, char** retval, const char* request)
 {
 	sgx_status_t status;
-	ms_generate_random_number_t ms;
+	ms_ecall_api_handler_t ms;
+	ms.ms_request = (char*)request;
 	status = sgx_ecall(eid, 0, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
@@ -349,12 +385,23 @@ sgx_status_t ecall_leader_fn(sgx_enclave_id_t eid)
 	return status;
 }
 
-sgx_status_t ecall_api_handler(sgx_enclave_id_t eid, const char* request)
+sgx_status_t generate_random_number(sgx_enclave_id_t eid, int* retval)
 {
 	sgx_status_t status;
-	ms_ecall_api_handler_t ms;
-	ms.ms_request = (char*)request;
+	ms_generate_random_number_t ms;
 	status = sgx_ecall(eid, 7, &ocall_table_Enclave, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
+	return status;
+}
+
+sgx_status_t ecall_ah(sgx_enclave_id_t eid, char** retval, const char* request, const char* ep)
+{
+	sgx_status_t status;
+	ms_ecall_ah_t ms;
+	ms.ms_request = (char*)request;
+	ms.ms_ep = (char*)ep;
+	status = sgx_ecall(eid, 8, &ocall_table_Enclave, &ms);
+	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
 
@@ -365,7 +412,7 @@ sgx_status_t ecall_send_heartbeat(sgx_enclave_id_t eid, const char* message, con
 	ms.ms_message = (char*)message;
 	ms.ms_ip = (char*)ip;
 	ms.ms_port = port;
-	status = sgx_ecall(eid, 8, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 9, &ocall_table_Enclave, &ms);
 	return status;
 }
 
@@ -377,7 +424,7 @@ sgx_status_t seal(sgx_enclave_id_t eid, sgx_status_t* retval, uint8_t* plaintext
 	ms.ms_plaintext_len = plaintext_len;
 	ms.ms_sealed_data = sealed_data;
 	ms.ms_sealed_size = sealed_size;
-	status = sgx_ecall(eid, 9, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 10, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }
@@ -390,7 +437,7 @@ sgx_status_t unseal(sgx_enclave_id_t eid, sgx_status_t* retval, sgx_sealed_data_
 	ms.ms_sealed_size = sealed_size;
 	ms.ms_plaintext = plaintext;
 	ms.ms_plaintext_len = plaintext_len;
-	status = sgx_ecall(eid, 10, &ocall_table_Enclave, &ms);
+	status = sgx_ecall(eid, 11, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
 }

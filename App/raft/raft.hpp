@@ -24,6 +24,7 @@ public:
 	std::string key_;
 	std::string val_;
 	bool committed_;
+
 	log_entry(int req, std::string key, std::string val)
 	: req_type_(req) , key_(key) , val_(val)
 	{
@@ -58,6 +59,7 @@ class log_t : public std::vector<log_entry>{
 	public:
 	int cmt_cnt_;
 	int st_cnt_;
+	std::mutex cmtl;
 	log_t() : std::vector<log_entry>() {
 		st_cnt_ = 0;
 		cmt_cnt_ = 0;
