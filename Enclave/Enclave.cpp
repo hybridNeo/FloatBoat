@@ -14,6 +14,25 @@ int generate_random_number() {
     ocall_print("Processing random number generation...");
     return 42;
 }
+
+
+std::string udp_sendmsg(std::string request, std::string host, int port_no)
+{
+	std::string response;
+    char* a = (char *)malloc(100 * 100);
+    ocall_udp_sendmsg(&a, request.c_str(), host.c_str() , port_no);
+    // ocall_print("enclave response is ");
+    // ocall_print(a);
+    std::string temp(a);
+    //std::strcpy(response,a);
+    response = a;
+    free(a);
+   // response = strcpy(*a);
+    //ocall_udp_sendmsg(request,host,port_no);
+    return response;
+}
+
+
 class node{
 public:
 	std::string port_;
@@ -98,7 +117,7 @@ void update_nodes(){
 		std::string message = "UPDATE;" + info.serialize();
 		std::string response;
 	    if(info.node_list_[i].ip_addr_ != info.cur_.ip_addr_ && info.node_list_[i].port_ != info.cur_.port_){
-	    	udp_sendmsg(message, info.node_list_[i].ip_addr_, std::stoi(info.node_list_[i].port_), response);
+	    	response = udp_sendmsg(message, info.node_list_[i].ip_addr_, std::stoi(info.node_list_[i].port_));
 	    		
 	    }
 	   
@@ -111,7 +130,7 @@ void ecall_send_heartbeat(const char* msg,const char* host, int port){
 	std::string ip(host);
 	std::string response;
 	
-	udp_sendmsg(message,ip,port,response);
+	response = udp_sendmsg(message,ip,port);
 	
 	//t.detach();
 }
@@ -136,6 +155,7 @@ void ecall_api_handler(const char* req){
 
 
 void ecall_leader_fn(){
+	ocall_print("here 5");
 	ocall_api_server(API_PORT);
 	//std::thread api_t(api_server);
 	info.term_++;
@@ -184,49 +204,55 @@ void ecall_leader_fn(){
 }
 
 int rand(){
-	char buf[10];
-	sgx_read_rand((unsigned char*) buf,5);
-	return atoi(buf);
+	// char buf[10];
+	// sgx_read_rand((unsigned char*) buf,5);
+	// return atoi(buf);
+	return 1000;
 }
 
 void ecall_straft(){
 	
-	// info.leader_tout_ = true;
-	// int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
-	// // std::string printstr = "Sleeping for " + sleep_amt;
-	// ocall_print(printstr.c_str());
-	// //std::cout << "Sleeping for " << sleep_amt << "milliseconds \n";
-	// //std::this_thread::sleep_for(std::chrono::milliseconds(sleep_amt));
-	// ocall_sleep(sleep_amt);
-	// //std::cout << "here1\n";
-	// if(info.node_list_.size() >= NODE_THRESHOLD && info.leader_tout_ == true){
-	// 	info.vote_m_.lock();
-	// 	if(info.vote_available_ == true){
-	// 		//std::cout << "here2\n";
-	// 		info.vote_available_ = false;
-	// 		info.vote_m_.unlock();
-	// 		start_election();
-	// 		return;
+	info.leader_tout_ = true;
+	int sleep_amt = LOWER_TIMEOUT + (rand() % (UPPER_TIMEOUT - LOWER_TIMEOUT));
+	std::string printstr = "Sleeping for " + sleep_amt;
+	//ocall_print("sleeping");
+	//std::cout << "Sleeping for " << sleep_amt << "milliseconds \n";
+	//std::this_thread::sleep_for(std::chrono::milliseconds(sleep_amt));
+	ocall_sleep(sleep_amt);
+	//std::cout << "here1\n";
+	//ocall_print("here 1 ");
+	if(info.node_list_.size() >= NODE_THRESHOLD && info.leader_tout_ == true){
+		info.vote_m_.lock();
+		if(info.vote_available_ == true){
+			//std::cout << "here2\n";
+			ocall_print("here 2");
+			info.vote_available_ = false;
+			info.vote_m_.unlock();
+			start_election();
+			return;
 
-	// 	}else{
-	// 		//send_heartbeat();
-	// 		info.vote_m_.unlock();
-	// 	}
+		}else{
+			//send_heartbeat();
+			info.vote_m_.unlock();
+		}
 		
-	// }
-	// info.vote_m_.lock();
-	// info.vote_available_ = true;
-	// info.vote_m_.unlock();
-	// ecall_start_raft();
+	}
+	info.vote_m_.lock();
+	info.vote_available_ = true;
+	info.vote_m_.unlock();
+	ecall_straft();
 }
 
 int num_votes;
 std::mutex nv_m;
 void ecall_get_vote( const char* ip_add, int port){
+	ocall_print("here 4");
+	ocall_print(ip_add);
+	ocall_print(std::to_string(port).c_str());
 	std::string ip(ip_add);
 	std::string message = "ELECT;" + info.cur_.ip_addr_ + ";" + info.cur_.port_ ;
 	std::string response;
-	udp_sendmsg(message,ip,port,response);
+	response = udp_sendmsg(message,ip,port);
 	
 	
 	
@@ -271,17 +297,22 @@ void start_election(){
  */
 char* ecall_heartbeat_handler(const char* req, const char* r_ep){
 	// ocall_print("request is " );
-	// ocall_print(request);
+	// ocall_print(req);
 	// return "OK";
 	std::string request(req);
+	// ocall_print("hearbeat_handler request : ");
+	// ocall_print(request.c_str());
+	// ocall_print(r_ep);
 
 	std::vector<std::string> vs1;
     split(vs1, request ,";");
+//    ocall_print(vs1[1].c_str());
     std::string ret = "OK";
     if(vs1[0] == "JOIN"){
     	info_m.lock();
     	info.node_list_.push_back(node(r_ep,vs1[1]));
     	info_m.unlock();
+    	update_nodes();
     	// std::thread t(update_nodes);
     	// t.detach();
     	//std::cout << "info : " << info.serialize();
@@ -335,10 +366,11 @@ void ecall_s_node(const char* ip_addr, const char* port, const char* intro_ip, c
 	std::string u_port(port);
 	std::string i_ip_addr(intro_ip);
 	std::string i_port(intro_port);
-	ocall_print(ip_addr);
-	ocall_print(port);
-	ocall_print(intro_ip);
-	ocall_print(intro_port);
+	ocall_print(u_ip_addr.c_str());
+	// ocall_print(ip_addr);
+	// ocall_print(port);
+	// ocall_print(intro_ip);
+	// ocall_print(intro_port);
 	if(u_ip_addr == i_ip_addr && u_port == i_port){
 		//case where this is the first node
 		//ocall_print("HERE\n");
@@ -347,25 +379,28 @@ void ecall_s_node(const char* ip_addr, const char* port, const char* intro_ip, c
 	else{
 		std::string response;
 		std::string message = "JOIN;" + u_port;
-	    udp_sendmsg(message, i_ip_addr, std::stoi(i_port), response);
-	  
+		response = udp_sendmsg(message, i_ip_addr, std::stoi(i_port));
 	    //std::cout << "Response is " << response << std::endl;
-	    info.deserialize(response);
+		info.deserialize(response);
 	}
 }
 
 void ecall_start_raft_main(const char* ip_addr, const char* port, const char* intro_ip, const char* intro_port){
 	info.cur_.port_ = port;
 	info.cur_.ip_addr_ = ip_addr;
-
+	ocall_print(ip_addr);
+	ocall_print("done");
 	ocall_heartbeat_server(std::stoi(port));
+	ocall_sleep(500);
 	ocall_start_node(ip_addr,port,intro_ip,intro_port);
 	//std::thread t2(start_node, u_ip_addr,u_port,i_ip_addr,i_port);
-	ecall_straft();
+	//ecall_straft();
+	// ocall_sleep(10000);
+	// ocall_print("here");
+	ocall_straft();
 	//std::thread t3(start_raft);
 	while(1){
-		
-		
+
 	}
 }
 

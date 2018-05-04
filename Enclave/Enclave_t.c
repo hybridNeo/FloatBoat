@@ -113,7 +113,7 @@ typedef struct ms_ocall_f_wrapper_t {
 } ms_ocall_f_wrapper_t;
 
 typedef struct ms_ocall_udp_sendmsg_t {
-	char* ms_retval;
+	char** ms_response;
 	char* ms_request;
 	char* ms_host;
 	int ms_port_no;
@@ -944,7 +944,7 @@ sgx_status_t SGX_CDECL ocall_f_wrapper(const char* request, const char* host, in
 	return status;
 }
 
-sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** retval, const char* request, const char* host, int port_no)
+sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** response, const char* request, const char* host, int port_no)
 {
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_request = request ? strlen(request) + 1 : 0;
@@ -965,6 +965,7 @@ sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** retval, const char* request, con
 	ms = (ms_ocall_udp_sendmsg_t*)__tmp;
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_udp_sendmsg_t));
 
+	ms->ms_response = SGX_CAST(char**, response);
 	if (request != NULL && sgx_is_within_enclave(request, _len_request)) {
 		ms->ms_request = (char*)__tmp;
 		__tmp = (void *)((size_t)__tmp + _len_request);
@@ -990,7 +991,6 @@ sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** retval, const char* request, con
 	ms->ms_port_no = port_no;
 	status = sgx_ocall(10, ms);
 
-	if (retval) *retval = ms->ms_retval;
 
 	sgx_ocfree();
 	return status;

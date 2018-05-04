@@ -27,7 +27,7 @@ void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_api_server, (int port));
 void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_start_node, (const char* ip_addr, const char* port, const char* intro_ip, const char* intro_port));
 void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_send_heartbeat, (const char* request, const char* host, int port_no));
 void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_f_wrapper, (const char* request, const char* host, int port_no));
-char* SGX_UBRIDGE(SGX_NOCONVENTION, ocall_udp_sendmsg, (const char* request, const char* host, int port_no));
+void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_udp_sendmsg, (char** response, const char* request, const char* host, int port_no));
 void SGX_UBRIDGE(SGX_CDECL, sgx_oc_cpuidex, (int cpuinfo[4], int leaf, int subleaf));
 int SGX_UBRIDGE(SGX_CDECL, sgx_thread_wait_untrusted_event_ocall, (const void* self));
 int SGX_UBRIDGE(SGX_CDECL, sgx_thread_set_untrusted_event_ocall, (const void* waiter));

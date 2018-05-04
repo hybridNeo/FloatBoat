@@ -1,4 +1,5 @@
 #include <vector>
+#include <string>
 
 #define LOWER_TIMEOUT 800
 #define UPPER_TIMEOUT 2000
@@ -20,19 +21,16 @@ void split(std::vector<std::string>& vs,std::string s, std::string delimiter){
 	    token = s.substr(0, pos);
 	    vs.push_back(token);
 	    //std::cout << token << std::endl;
+	    //ocall_print(token.c_str());
 	    s.erase(0, pos + delimiter.length());
+	}
+	if(s.length() != 0){
+		//ocall_print(s.c_str());
+		vs.push_back(s);
 	}
 }
 
 
-void udp_sendmsg(std::string request, std::string host, int port_no, std::string& response)
-{
-    char** a = (char **)malloc(100 * 100);
-    ocall_udp_sendmsg(a, request.c_str(), host.c_str() , port_no);
-    response = (*a);
-    //ocall_udp_sendmsg(request,host,port)
-
-}
 
 class log_entry{
 public:

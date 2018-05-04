@@ -39,7 +39,7 @@ sgx_status_t SGX_CDECL ocall_api_server(int port);
 sgx_status_t SGX_CDECL ocall_start_node(const char* ip_addr, const char* port, const char* intro_ip, const char* intro_port);
 sgx_status_t SGX_CDECL ocall_send_heartbeat(const char* request, const char* host, int port_no);
 sgx_status_t SGX_CDECL ocall_f_wrapper(const char* request, const char* host, int port_no);
-sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** retval, const char* request, const char* host, int port_no);
+sgx_status_t SGX_CDECL ocall_udp_sendmsg(char** response, const char* request, const char* host, int port_no);
 sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf);
 sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const void* self);
 sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const void* waiter);

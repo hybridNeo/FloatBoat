@@ -33,7 +33,7 @@ enclave {
         void ocall_start_node([in,string]const char* ip_addr, [in,string]const char* port, [in,string] const char* intro_ip , [in,string] const char* intro_port);
         void ocall_send_heartbeat([in,string] const char * request, [in,string] const char* host , int port_no);
         void ocall_f_wrapper([in,string] const char * request, [in,string] const char* host , int port_no);
-        char* ocall_udp_sendmsg([in,string]const char* request, [in,string] const char* host, int port_no);
+        void ocall_udp_sendmsg([user_check] char** response, [in,string]const char* request, [in,string] const char* host, int port_no);
         [cdecl] void sgx_oc_cpuidex([out] int cpuinfo[4], int leaf, int subleaf);
 
         /* Go outside and wait on my untrusted event */

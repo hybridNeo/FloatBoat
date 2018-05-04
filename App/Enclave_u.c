@@ -97,7 +97,7 @@ typedef struct ms_ocall_f_wrapper_t {
 } ms_ocall_f_wrapper_t;
 
 typedef struct ms_ocall_udp_sendmsg_t {
-	char* ms_retval;
+	char** ms_response;
 	char* ms_request;
 	char* ms_host;
 	int ms_port_no;
@@ -212,7 +212,7 @@ static sgx_status_t SGX_CDECL Enclave_ocall_f_wrapper(void* pms)
 static sgx_status_t SGX_CDECL Enclave_ocall_udp_sendmsg(void* pms)
 {
 	ms_ocall_udp_sendmsg_t* ms = SGX_CAST(ms_ocall_udp_sendmsg_t*, pms);
-	ms->ms_retval = ocall_udp_sendmsg((const char*)ms->ms_request, (const char*)ms->ms_host, ms->ms_port_no);
+	ocall_udp_sendmsg(ms->ms_response, (const char*)ms->ms_request, (const char*)ms->ms_host, ms->ms_port_no);
 
 	return SGX_SUCCESS;
 }
