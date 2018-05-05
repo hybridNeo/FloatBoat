@@ -138,8 +138,8 @@ void ecall_send_heartbeat(const char* msg,const char* host, int port){
 
 
 char* ecall_api_handler(const char* req){
-	ocall_print("API REQQQQQQQUEST q0");
-	ocall_print(req);
+	//ocall_print("API REQQQQQQQUEST q0");
+	//ocall_print(req);
    
 	std::string request(req);
 	std::vector<std::string> vs1;
@@ -147,7 +147,7 @@ char* ecall_api_handler(const char* req){
    
     //std::cout << "Request is " << request << std::endl ; 
     if( vs1[0] == "SET" && vs1.size() >= 3){
-    	ocall_print("g1");
+    	//ocall_print("g1");
         log_entry l(SET,vs1[1],vs1[2]);
         int id = info.log_.size();
         ocall_set(id,0);
@@ -166,7 +166,7 @@ char* ecall_api_handler(const char* req){
 
 
 void ecall_leader_fn(){
-	ocall_print("here 5");
+	//ocall_print("here 5");
 	ocall_api_server(API_PORT);
 	//std::thread api_t(api_server);
 	info.term_++;
@@ -197,7 +197,7 @@ void ecall_leader_fn(){
 		}
 		if(count < info.node_list_.size()/2){
 			if(info.log_.st_cnt_ > info.log_.cmt_cnt_){
-				for(int i=info.log_.cmt_cnt_; i <= info.log_.st_cnt_;++i ){
+			for(int i=info.log_.cmt_cnt_; i < info.log_.st_cnt_;++i ){
 					execute_cmd(i);
 					info.log_.cmt_cnt_++;
 				}
@@ -218,7 +218,7 @@ int rand(){
 	// char buf[10];
 	// sgx_read_rand((unsigned char*) buf,5);
 	// return atoi(buf);
-	return 1000;
+	return 800;
 }
 
 void ecall_straft(){
@@ -236,7 +236,7 @@ void ecall_straft(){
 		info.vote_m_.lock();
 		if(info.vote_available_ == true){
 			//std::cout << "here2\n";
-			ocall_print("here 2");
+			//ocall_print("here 2");
 			info.vote_available_ = false;
 			info.vote_m_.unlock();
 			start_election();
@@ -257,9 +257,9 @@ void ecall_straft(){
 int num_votes;
 std::mutex nv_m;
 void ecall_get_vote( const char* ip_add, int port){
-	ocall_print("here 4");
-	ocall_print(ip_add);
-	ocall_print(std::to_string(port).c_str());
+	//ocall_print("here 4");
+	//ocall_print(ip_add);
+	//ocall_print(std::to_string(port).c_str());
 	std::string ip(ip_add);
 	std::string message = "ELECT;" + info.cur_.ip_addr_ + ";" + info.cur_.port_ ;
 	std::string response;
@@ -304,13 +304,13 @@ char* ecall_ah(const char* req, const char* r_ep){
    
 	std::string request(req);
 	std::vector<std::string> vs1;
-    ocall_print("AH API REQQQQQQQUEST q0");
-	ocall_print(req);
+    //ocall_print("AH API REQQQQQQQUEST q0");
+	//ocall_print(req);
     split(vs1, request , ";");
    	
     //std::cout << "Request is " << request << std::endl ; 
     if( vs1[0] == "SET" && vs1.size() >= 3){
-    	ocall_print("g1");
+    	//ocall_print("g1");
         log_entry l(SET,vs1[1],vs1[2]);
         int id = info.log_.size();
         info.log_.push_back(l);
@@ -367,7 +367,7 @@ char* ecall_heartbeat_handler(const char* req, const char* r_ep){
 
     }else if(vs1[0] == "LEADER"){
     	info.leader_tout_ = false;
-    	ocall_print("here in leader");
+    	//ocall_print("here in leader");
     	//std::cout << "heartbeat recevied\n";
     	info.term_ = max(info.term_,std::stoi(vs1[1]));
     	if(info.term_ > std::stoi(vs1[1])){
@@ -378,9 +378,9 @@ char* ecall_heartbeat_handler(const char* req, const char* r_ep){
     		//std::cout << "rlog:" << r_log;
     		log_t new_log(r_log);
     		
-    		ocall_print(std::to_string(info.log_.size()).c_str());
+    		//ocall_print(std::to_string(info.log_.size()).c_str());
     		info.log_ = new_log;
-    		ocall_print(std::to_string(info.log_.size()).c_str());
+    		//ocall_print(std::to_string(info.log_.size()).c_str());
     		if(info.log_.st_cnt_ > info.log_.cmt_cnt_){
     			//execute
     			for(int i= info.log_.cmt_cnt_; i <= info.log_.st_cnt_;++i ){
@@ -443,7 +443,7 @@ void ecall_start_raft_main(const char* ip_addr, const char* port, const char* in
 
 
 bool execute_cmd( int i){
-	ocall_print("hmp 1 ");
+	//ocall_print("hmp 1 ");
 	//std::string type =  "";//((info.log_[i].req_type_ == SET) ? "SET" : "GET");
 	// if(info.log_[i].req_type_ == SET){
 	// 	type = "SET";

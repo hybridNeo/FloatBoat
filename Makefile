@@ -92,7 +92,7 @@ else
 		App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG11
 endif
 
-App_Cpp_Flags := $(App_C_Flags) -std=c++11 -g
+App_Cpp_Flags := $(App_C_Flags) -std=c++11 -o3
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -L$(RAFT_LIB) -lboost_system -lpthread
 
 ifneq ($(SGX_MODE), HW)

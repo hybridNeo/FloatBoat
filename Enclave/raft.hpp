@@ -4,7 +4,7 @@
 
 #define LOWER_TIMEOUT 800
 #define UPPER_TIMEOUT 2000
-#define HB_FREQ 200
+#define HB_FREQ 170
 #define API_PORT 8040
 #define VOTE_TIME 100
 #define NODE_THRESHOLD 5

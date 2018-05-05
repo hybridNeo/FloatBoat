@@ -137,7 +137,7 @@ void send_heartbeat_t(const char* message, const char* ip , int port){
 
 void ocall_send_heartbeat(const char* message, const char* ip, int port){
     std::thread t(ocall_send_heartbeat, message, ip , port );
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     t.detach();
 }
 
@@ -157,7 +157,7 @@ void ocall_get_vote(const char* ip, int port){
     char buf[25];
     std::strcpy(buf,ip);
     std::thread t(get_vote_t, ip , port);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     t.detach();
 }
 
