@@ -1,23 +1,22 @@
-# Intel SGX "Hello World"
+# FloatBoat - SGX based RAFT BFT 
 
-This is meant to be a base template for an [Intel SGX](https://github.com/01org/linux-sgx/) application on Linux. Not sure if it is just me, but I feel the documentations on Intel SGX development on Linux is still sorely lacking. This meant to be a stub of a "Getting-started" tutorial.
+FloatBoat is a BFT algorithm which leverages Intel SGX to achieve Byzantine Fault Tolerance for a RAFT style protocol
 
-This template is based on the SampleEnclave app of the sample enclaves provided with the Intel SGX Linux [drivers](https://github.com/01org/linux-sgx-driver) and [SDK](https://github.com/01org/linux-sgx/).
 
-## Features
 
-- Sample code for doing `ECALL`
-- Sample code for doing `OCALL`
-- Sample code for sealing (can be taken out and patched into your enclave!)
+## How to build
 
-## TODO
+- Setup Intel SGX and run `source $HOME/linux-sgx/linux/installer/bin/sgxsdk/environment`
+- make `SGX_MODE=SIM` for emulator mode and `make` for HW mode
 
-- Tutorial explaining what each directory and file is used for.
+## Running the Protocol ( default requires 5 nodes)
+- The first node acts as introducer 
+- `./app <IP_ADDRESS_OF_MACHINE> <PORT> <IP_INTRODUCER> <PORT_INTRODUCER>`
+- For example run introducer as `./app 192.168.1.1 2000 192.168.1.1 2000`
 
-- Write a getting started tutorial.
+## Changing settings like Heartbeat
 
-- Tutorial on treating `edl`s as static library (with the sealing functions as example)
+- Enclave/raft.hpp define HB_FREQ , change that to change HB frequency
 
-## Contribute
+- make clean and make again after that
 
-Any help for the above TODOs or any general feedback will be much appreciated! Go ahead and submit those PRs in!
